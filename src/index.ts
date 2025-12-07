@@ -21,7 +21,7 @@ import { generalLimiter, authLimiter, apiLimiter, uploadLimiter } from './middle
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
