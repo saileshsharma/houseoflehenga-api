@@ -6,18 +6,28 @@ import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
+// Multer file type for type assertions
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+
 // Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB max
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: Request, file: MulterFile, cb: (error: Error | null, acceptFile: boolean) => void) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.') as any, false);
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.'), false);
     }
   },
 });
@@ -30,7 +40,7 @@ router.post(
   upload.single('image'),
   async (req: Request, res: Response) => {
     try {
-      const file = (req as any).file as Express.Multer.File | undefined;
+      const file = (req as any).file as MulterFile | undefined;
       if (!file) {
         return res.status(400).json({ success: false, error: 'No image file provided' });
       }
@@ -62,7 +72,7 @@ router.post(
   upload.array('images', 10), // Max 10 images
   async (req: Request, res: Response) => {
     try {
-      const files = (req as any).files as Express.Multer.File[] | undefined;
+      const files = (req as any).files as MulterFile[] | undefined;
       if (!files || files.length === 0) {
         return res.status(400).json({ success: false, error: 'No image files provided' });
       }
@@ -156,7 +166,7 @@ router.post(
         return res.status(404).json({ success: false, error: 'Product not found' });
       }
 
-      const file = (req as any).file as Express.Multer.File | undefined;
+      const file = (req as any).file as MulterFile | undefined;
       if (!file) {
         return res.status(400).json({ success: false, error: 'No image file provided' });
       }
