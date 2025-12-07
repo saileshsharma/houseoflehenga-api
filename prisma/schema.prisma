@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User and Authentication
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  addresses     Address[]
+  orders        Order[]
+  cartItems     CartItem[]
+  wishlist      WishlistItem[]
+  reviews       Review[]
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model Address {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName      String
+  phone         String
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  state         String
+  pincode       String
+  isDefault     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders        Order[]
+}
+
+// Product Catalog
+model Category {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  imagePublicId String?   // Cloudinary public_id for category image
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  products      Product[]
+}
+
+model Color {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  hexCode       String?
+  createdAt     DateTime  @default(now())
+
+  products      Product[]
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String
+  price         Int       // Price in paise (smallest currency unit)
+  originalPrice Int?      // For showing discounts
+
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id])
+
+  colorId       String
+  color         Color     @relation(fields: [colorId], references: [id])
+
+  fabric        String
+  work          String    // Type of embroidery/work
+  occasion      String
+
+  stock         Int       @default(0)
+  rating        Float     @default(0)
+  reviewCount   Int       @default(0)
+
+  featured      Boolean   @default(false)
+  newArrival    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  images        ProductImage[]
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+
+  // Performance indexes for common queries
+  @@index([categoryId])
+  @@index([colorId])
+  @@index([featured])
+  @@index([newArrival])
+  @@index([isActive])
+  @@index([price])
+  @@index([createdAt])
+}
+
+model ProductImage {
+  id            String    @id @default(cuid())
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url           String?   // Legacy: direct URL (for backward compatibility during migration)
+  publicId      String?   // Cloudinary public_id (preferred - used to generate URLs on-the-fly)
+  alt           String?
+  isPrimary     Boolean   @default(false)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+}
+
+// Shopping Cart
+model CartItem {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity      Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, productId])
+}
+
+// Wishlist
+model WishlistItem {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, productId])
+}
+
+// Orders
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+
+  addressId       String
+  shippingAddress Address       @relation(fields: [addressId], references: [id])
+
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  paymentId       String?       // External payment gateway ID
+
+  subtotal        Int           // In paise
+  shippingCost    Int           @default(0)
+  discount        Int           @default(0)
+  couponCode      String?       // Applied coupon code
+  total           Int           // In paise
+
+  notes           String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           OrderItem[]
+
+  // Performance indexes
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+
+  quantity      Int
+  price         Int       // Price at time of order (in paise)
+
+  createdAt     DateTime  @default(now())
+}
+
+// Coupons
+model Coupon {
+  id              String        @id @default(cuid())
+  code            String        @unique
+  description     String?
+  discountType    DiscountType  @default(PERCENTAGE)
+  discountValue   Int           // Percentage (0-100) or amount in paise
+  minOrderAmount  Int?          // Minimum order amount in paise
+  maxDiscount     Int?          // Maximum discount amount in paise (for percentage discounts)
+  usageLimit      Int?          // Total usage limit
+  usageCount      Int           @default(0)
+  perUserLimit    Int           @default(1) // Usage per user
+  validFrom       DateTime      @default(now())
+  validTo         DateTime
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  couponUsages    CouponUsage[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validTo])
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String
+  orderId   String?
+  usedAt    DateTime @default(now())
+
+  @@index([couponId])
+  @@index([userId])
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+// Reviews
+model Review {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  rating        Int       // 1-5
+  title         String?
+  comment       String
+  images        String[]  // Array of image URLs
+
+  isVerified    Boolean   @default(false) // Verified purchase
+  isApproved    Boolean   @default(false) // Admin approved
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, productId])
+}
+
+// Newsletter Subscribers
+model NewsletterSubscriber {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  isActive      Boolean   @default(true)
+  source        String?   // Where they subscribed from (footer, popup, checkout)
+  createdAt     DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([email])
+  @@index([isActive])
+}
