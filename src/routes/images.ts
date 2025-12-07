@@ -1,16 +1,10 @@
 import { Router, Request, Response } from 'express';
-import multer, { FileFilterCallback } from 'multer';
+import multer from 'multer';
 import { uploadImage, deleteImage, uploadFromUrl, getTransformedUrl, ImagePresets } from '../utils/cloudinary';
 import prisma from '../utils/prisma';
 import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
-
-// Extend Express Request type for multer
-interface MulterRequest extends Request {
-  file?: Express.Multer.File;
-  files?: Express.Multer.File[];
-}
 
 // Configure multer for memory storage
 const upload = multer({
@@ -18,12 +12,12 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB max
   },
-  fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+  fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.'));
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.') as any, false);
     }
   },
 });
@@ -34,14 +28,15 @@ router.post(
   authenticate,
   requireAdmin,
   upload.single('image'),
-  async (req: MulterRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
-      if (!req.file) {
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) {
         return res.status(400).json({ success: false, error: 'No image file provided' });
       }
 
       const folder = req.body.folder || 'products';
-      const result = await uploadImage(req.file.buffer, folder);
+      const result = await uploadImage(file.buffer, folder);
 
       res.json({
         success: true,
@@ -65,9 +60,9 @@ router.post(
   authenticate,
   requireAdmin,
   upload.array('images', 10), // Max 10 images
-  async (req: MulterRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
-      const files = req.files as Express.Multer.File[];
+      const files = (req as any).files as Express.Multer.File[] | undefined;
       if (!files || files.length === 0) {
         return res.status(400).json({ success: false, error: 'No image files provided' });
       }
@@ -150,7 +145,7 @@ router.post(
   authenticate,
   requireAdmin,
   upload.single('image'),
-  async (req: MulterRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const { productId } = req.params;
       const { isPrimary = false, sortOrder = 0 } = req.body;
@@ -161,12 +156,13 @@ router.post(
         return res.status(404).json({ success: false, error: 'Product not found' });
       }
 
-      if (!req.file) {
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) {
         return res.status(400).json({ success: false, error: 'No image file provided' });
       }
 
       // Upload to Cloudinary
-      const result = await uploadImage(req.file.buffer, `products/${product.slug}`);
+      const result = await uploadImage(file.buffer, `products/${product.slug}`);
 
       // If this is primary, unset other primary images
       if (isPrimary === 'true' || isPrimary === true) {
