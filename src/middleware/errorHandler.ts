@@ -51,11 +51,16 @@ export const errorHandler = (
     });
   }
 
-  // Default error
+  // Default error - always log full error for debugging
+  console.error('Unhandled error:', err.message, err.stack);
+
   return res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message
+    error: 'Internal server error',
+    // Include error details for debugging (remove in final production)
+    debug: {
+      message: err.message,
+      name: err.name
+    }
   });
 };
