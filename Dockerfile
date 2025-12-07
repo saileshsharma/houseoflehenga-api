@@ -34,8 +34,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm install --omit=dev
+# Install all dependencies (tsx and prisma needed for seeding)
+RUN npm install
 
 # Copy Prisma schema and generate client
 COPY prisma ./prisma/
@@ -55,5 +55,5 @@ ENV PORT=3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start the application using npm start (respects package.json scripts)
+CMD ["npm", "start"]
