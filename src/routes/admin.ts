@@ -62,12 +62,12 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
       }),
 
       // Total customers
-      prisma.user.count({ where: { role: 'USER' } }),
+      prisma.user.count({ where: { role: 'CUSTOMER' } }),
 
       // New customers this month
       prisma.user.count({
         where: {
-          role: 'USER',
+          role: 'CUSTOMER',
           createdAt: { gte: thisMonth }
         }
       }),
@@ -336,9 +336,9 @@ router.get('/analytics/customers', async (req: Request, res: Response, next: Nex
       customersWithOrders,
       topCustomers
     ] = await Promise.all([
-      prisma.user.count({ where: { role: 'USER' } }),
+      prisma.user.count({ where: { role: 'CUSTOMER' } }),
       prisma.user.count({
-        where: { role: 'USER', createdAt: { gte: thisMonth } }
+        where: { role: 'CUSTOMER', createdAt: { gte: thisMonth } }
       }),
       prisma.order.groupBy({
         by: ['userId'],

@@ -1,10 +1,16 @@
 import { Router, Request, Response } from 'express';
-import multer from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 import { uploadImage, deleteImage, uploadFromUrl, getTransformedUrl, ImagePresets } from '../utils/cloudinary';
-import { prisma } from '../utils/prisma';
+import prisma from '../utils/prisma';
 import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
+
+// Extend Express Request type for multer
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[];
+}
 
 // Configure multer for memory storage
 const upload = multer({
@@ -12,7 +18,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB max
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -28,7 +34,7 @@ router.post(
   authenticate,
   requireAdmin,
   upload.single('image'),
-  async (req: Request, res: Response) => {
+  async (req: MulterRequest, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ success: false, error: 'No image file provided' });
@@ -59,7 +65,7 @@ router.post(
   authenticate,
   requireAdmin,
   upload.array('images', 10), // Max 10 images
-  async (req: Request, res: Response) => {
+  async (req: MulterRequest, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
@@ -144,7 +150,7 @@ router.post(
   authenticate,
   requireAdmin,
   upload.single('image'),
-  async (req: Request, res: Response) => {
+  async (req: MulterRequest, res: Response) => {
     try {
       const { productId } = req.params;
       const { isPrimary = false, sortOrder = 0 } = req.body;
