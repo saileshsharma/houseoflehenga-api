@@ -40,4 +40,3 @@ README.md
 # Development config
 .eslintrc*
 .prettierrc*
-tsconfig.json
