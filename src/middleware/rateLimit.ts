@@ -78,30 +78,32 @@ export const createRateLimiter = (options: {
 };
 
 // Pre-configured rate limiters for different use cases
+// NOTE: In-memory rate limiting doesn't work well with Cloud Run (multiple instances)
+// For production, implement Redis-based rate limiting
 export const generalLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 100,                   // 100 requests per 15 minutes
+  max: 1000,                  // 1000 requests per 15 minutes
   name: 'general',
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 
 export const authLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 100,                   // 100 login attempts per 15 minutes (increased for development)
+  max: 500,                   // 500 login attempts per 15 minutes (high for Cloud Run)
   name: 'auth',
   message: 'Too many login attempts, please try again later'
 });
 
 export const apiLimiter = createRateLimiter({
   windowMs: 60 * 1000,       // 1 minute
-  max: 60,                    // 60 requests per minute
+  max: 300,                   // 300 requests per minute
   name: 'api',
   message: 'API rate limit exceeded, please slow down'
 });
 
 export const uploadLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000,  // 1 hour
-  max: 20,                    // 20 uploads per hour
+  max: 50,                    // 50 uploads per hour
   name: 'upload',
   message: 'Upload limit exceeded, please try again later'
 });
