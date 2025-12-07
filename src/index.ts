@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import categoryRoutes from './routes/categories';
+import colorRoutes from './routes/colors';
 import cartRoutes from './routes/cart';
 import wishlistRoutes from './routes/wishlist';
 import orderRoutes from './routes/orders';
@@ -44,6 +45,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);           // Strict limit for auth
 app.use('/api/products', apiLimiter, productRoutes);     // API limit
 app.use('/api/categories', apiLimiter, categoryRoutes);  // API limit
+app.use('/api/colors', apiLimiter, colorRoutes);         // Colors API
 app.use('/api/cart', apiLimiter, cartRoutes);            // API limit
 app.use('/api/wishlist', apiLimiter, wishlistRoutes);    // API limit
 app.use('/api/orders', apiLimiter, orderRoutes);         // API limit
